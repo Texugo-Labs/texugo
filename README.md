@@ -1,11 +1,6 @@
 <div align="center">
 
-```
-   ___
-  (o,o)   texugo
-  {`"'}
-  -"-"-
-```
+# 🦡
 
 **Fearless tooling for JavaScript projects.**
 
