@@ -1,0 +1,26 @@
+{
+  "name": "@texugolabs/core",
+  "version": "0.0.0",
+  "description": "Shared sandbox runner for Texugo tools — isolate a repo, mutate it, see what survives",
+  "license": "MIT",
+  "author": "Vinicius Costa Marinho",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Texugo-Labs/texugo.git",
+    "directory": "packages/core"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "build": "tsc --build"
+  }
+}

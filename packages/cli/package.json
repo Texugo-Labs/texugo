@@ -1,0 +1,47 @@
+{
+  "name": "texugo",
+  "version": "0.0.0",
+  "description": "Fearless tooling for JavaScript projects — find out what your repo actually survives",
+  "license": "MIT",
+  "author": "Vinicius Costa Marinho",
+  "homepage": "https://github.com/Texugo-Labs/texugo#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Texugo-Labs/texugo.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/Texugo-Labs/texugo/issues"
+  },
+  "keywords": [
+    "dependencies",
+    "upgrade",
+    "major",
+    "semver",
+    "ci",
+    "chaos",
+    "sandbox",
+    "texugo"
+  ],
+  "type": "module",
+  "bin": {
+    "texugo": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "build": "tsc --build"
+  },
+  "dependencies": {
+    "@texugolabs/core": "workspace:*",
+    "@texugolabs/raid": "workspace:*"
+  }
+}

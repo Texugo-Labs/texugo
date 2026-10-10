@@ -1,0 +1,21 @@
+{
+  "name": "texugo-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Texugo Labs — fearless tooling for JavaScript projects",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "build": "tsc --build packages/core packages/raid packages/cli",
+    "clean": "tsc --build --clean packages/core packages/raid packages/cli",
+    "typecheck": "tsc --build --dry packages/core packages/raid packages/cli",
+    "texugo": "node packages/cli/dist/bin.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}
