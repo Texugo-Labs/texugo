@@ -11,7 +11,7 @@
   "scripts": {
     "build": "tsc --build packages/core packages/raid packages/cli",
     "clean": "tsc --build --clean packages/core packages/raid packages/cli",
-    "typecheck": "tsc --build --dry packages/core packages/raid packages/cli",
+    "typecheck": "tsc --build packages/core packages/raid packages/cli",
     "test": "pnpm -r test",
     "texugo": "node packages/cli/dist/bin.js"
   },

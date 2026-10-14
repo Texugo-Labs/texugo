@@ -22,7 +22,7 @@ else. Commands are named for badger behaviours.
 ```sh
 pnpm install
 pnpm build          # tsc --build across the three packages, in dependency order
-pnpm typecheck      # same graph, no emit
+pnpm typecheck      # same as build: referenced projects can't check with --noEmit (TS6310)
 pnpm test           # per package: tsc --build, then node --test inside dist/
 pnpm clean          # tsc --build --clean
 
