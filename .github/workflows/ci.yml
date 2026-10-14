@@ -60,6 +60,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+      # The test runs once per package manager and skips any that is missing.
+      # Pinned like the actions above, so a new release cannot fail main.
+      - run: npm install --global yarn@1.22.22 bun@1.4.3
       - run: node --test --test-reporter=spec raid.integration.test.js
         working-directory: packages/cli/dist
         env:
