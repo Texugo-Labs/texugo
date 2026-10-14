@@ -14,12 +14,15 @@ concurrency:
 
 jobs:
   test:
-    name: Node ${{ matrix.node }}
-    runs-on: ubuntu-latest
+    name: ${{ matrix.os }} / Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
     strategy:
-      # A failure on one Node version says nothing about the other; see both.
+      # A failure on one Node version or OS says nothing about another; see all.
       fail-fast: false
       matrix:
+        # Windows is not optional: exec() takes a separate cmd.exe path there,
+        # and its tests are skipped everywhere else.
+        os: [ubuntu-latest, windows-latest]
         node: [22, 24]
     steps:
       # Pinned to commit SHAs: a tool that audits dependency trees should not
