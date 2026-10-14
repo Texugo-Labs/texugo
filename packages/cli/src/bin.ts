@@ -63,6 +63,12 @@ async function main(): Promise<number> {
   }
 }
 
+// Steps run in their own process groups, so Ctrl+C no longer reaches them.
+// Node's default handling skips 'exit' listeners; exiting runs them, and core's
+// kills the steps still running.
+process.once('SIGINT', () => process.exit(130));
+process.once('SIGTERM', () => process.exit(143));
+
 main()
   .then((code) => {
     process.exitCode = code;

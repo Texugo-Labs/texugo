@@ -231,6 +231,58 @@ const CASES: Record<string, Case[]> = {
     ],
   ],
 
+  // Captured from each package manager asked for a version that does not
+  // exist, the shape of a raid upgrade whose target was unpublished.
+  'other package managers': [
+    [
+      'pnpm 10: ERR_PNPM_NO_MATCHING_VERSION names the version',
+      failed(
+        INSTALLED,
+        step({
+          name: 'upgrade',
+          command: 'pnpm add --save-prod semver@99.0.0 --reporter=append-only',
+          stdout:
+            ' ERR_PNPM_NO_MATCHING_VERSION  No matching version found for semver@99.0.0 while fetching it from https://registry.npmjs.org/\n\n' +
+            'This error happened while installing a direct dependency of /tmp/texugo-semver-99\n\n' +
+            'The latest release of semver is "7.8.5".\n\n' +
+            'Other releases are:\n  * legacy: 5.7.2\n  * latest-6: 6.3.1\n\n' +
+            'If you need the full list of all 119 published versions run "pnpm view semver versions".\n',
+        }),
+      ),
+      /^ERR_PNPM_NO_MATCHING_VERSION {2}No matching version found for semver@99\.0\.0/,
+    ],
+    [
+      'yarn classic: the resolution error, not the banner or the docs link',
+      failed(
+        INSTALLED,
+        step({
+          name: 'upgrade',
+          command: 'yarn add semver@99.0.0',
+          stdout:
+            'yarn add v1.22.22\n[1/4] Resolving packages...\n' +
+            'info Visit https://yarnpkg.com/en/docs/cli/add for documentation about this command.\n',
+          stderr: 'error Couldn\'t find any versions for "semver" that matches "99.0.0"\n',
+        }),
+      ),
+      'error Couldn\'t find any versions for "semver" that matches "99.0.0"',
+    ],
+    [
+      'bun: the first error names the version, the second only restates it',
+      failed(
+        INSTALLED,
+        step({
+          name: 'upgrade',
+          command: 'bun add semver@99.0.0',
+          stdout: 'bun add v1.4.3 (c6da4a4d3)\n',
+          stderr:
+            'error: No version matching "99.0.0" found for specifier "semver" (but package exists)\n' +
+            'error: semver@99.0.0 failed to resolve\n',
+        }),
+      ),
+      'error: No version matching "99.0.0" found for specifier "semver" (but package exists)',
+    ],
+  ],
+
   'bare non-zero exit': [
     [
       'npm banner and nothing else',
@@ -243,6 +295,27 @@ const CASES: Record<string, Case[]> = {
         command: 'pnpm run test',
         stdout: '\n> fixture@1.0.0 test /tmp/texugo-chalk-6\n> node test.js\n\n',
         stderr: ' ELIFECYCLE  Test failed. See above for more details.\n',
+      }),
+      'test exited 1',
+    ],
+    // Captured from yarn 1.22.22 and bun 1.4.3 running `node fail.js`, which
+    // exits 1 silently. Both close with their own error-shaped epilogue.
+    [
+      'yarn classic banner, script echo and "error Command failed" epilogue',
+      failedAt({
+        command: 'yarn run test',
+        stdout:
+          'yarn run v1.22.22\n$ node fail.js\n' +
+          'info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.\n',
+        stderr: 'error Command failed with exit code 1.\n',
+      }),
+      'test exited 1',
+    ],
+    [
+      'bun script echo and "error: script exited" epilogue',
+      failedAt({
+        command: 'bun run test',
+        stderr: '$ node fail.js\nerror: script "test" exited with code 1\n',
       }),
       'test exited 1',
     ],

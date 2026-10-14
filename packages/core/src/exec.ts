@@ -47,6 +47,32 @@ function findsOnWindows(command: string, cwd: string, env: NodeJS.ProcessEnv): b
   );
 }
 
+/**
+ * Process groups of POSIX steps still running. Each step leads its own group so
+ * a timeout can kill everything it started, which puts it beyond the terminal's
+ * Ctrl+C; whatever is still here when the process exits is killed instead.
+ */
+const runningGroups = new Set<number>();
+let exitHookInstalled = false;
+
+function killGroup(pid: number): boolean {
+  try {
+    process.kill(-pid, 'SIGKILL');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function trackGroup(pid: number): void {
+  runningGroups.add(pid);
+  if (exitHookInstalled) return;
+  exitHookInstalled = true;
+  process.on('exit', () => {
+    for (const group of runningGroups) killGroup(group);
+  });
+}
+
 function append(current: string, chunk: string): string {
   if (current.length >= MAX_OUTPUT_BYTES) return current;
   return (current + chunk).slice(0, MAX_OUTPUT_BYTES);
@@ -108,17 +134,21 @@ export function exec(argv: string[], options: ExecOptions): Promise<StepResult> 
     // shell: true and deprecates doing so (DEP0190).
     const child = IS_WINDOWS
       ? spawn(display, { ...spawnOptions, shell: true })
-      : spawn(command, args, { ...spawnOptions, shell: false });
+      : spawn(command, args, { ...spawnOptions, shell: false, detached: true });
+    const pid = child.pid;
+    if (!IS_WINDOWS && pid !== undefined) trackGroup(pid);
 
-    // On Windows the child is cmd.exe; killing only it orphans the real process,
-    // which keeps the pipes open, so the step would never settle.
+    // Killing only the direct child orphans what it started: cmd.exe's program
+    // on Windows, npm's sh and node elsewhere. The orphans keep the pipes open,
+    // so the step would never settle. Take down the whole tree instead.
     const kill = (): void => {
-      if (IS_WINDOWS && child.pid !== undefined) {
-        spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' }).on(
+      if (pid === undefined) return;
+      if (IS_WINDOWS) {
+        spawn('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore' }).on(
           'error',
           () => undefined,
         );
-      } else {
+      } else if (!killGroup(pid)) {
         child.kill('SIGKILL');
       }
     };
@@ -141,6 +171,7 @@ export function exec(argv: string[], options: ExecOptions): Promise<StepResult> 
       if (settled) return;
       settled = true;
       if (timer) clearTimeout(timer);
+      if (pid !== undefined) runningGroups.delete(pid);
       resolve({
         name,
         command: display,

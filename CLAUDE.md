@@ -81,6 +81,12 @@ wiring a CLI subcommand. Nothing else.
   are `.cmd` shims, commands run through `cmd.exe`, so `exec()` refuses any
   argument outside a safe character set and checks `PATH` itself to keep the
   `-1` contract.
+- **A timeout kills the whole process tree**, not just the direct child:
+  `taskkill /T` on Windows, the step's own process group elsewhere. Killing
+  only `npm` leaves its `sh` and `node` holding the pipes, and the step never
+  settles. Because those groups are out of reach of the terminal's Ctrl+C,
+  `core` kills any still running on process exit, and the CLI turns
+  SIGINT/SIGTERM into an exit so that hook runs.
 - **Captured output is capped** (256KB per stream) and truncated again in the
   JSON report. A pathological build log must not exhaust memory or produce a
   megabyte report.
@@ -139,6 +145,8 @@ semver      6     7.8.5  ok
 That pair is also the integration test: `packages/cli/fixtures/raid/`, driven by
 `cli/src/raid.integration.test.ts`, which runs the built CLI against it and
 checks the `--json` report and that the fixture is byte-identical afterwards.
+It runs once per package manager: npm against the fixture itself, pnpm, yarn
+and bun against a temp copy given their lockfile, skipping any not installed.
 It needs network, so `pnpm test` skips it unless `TEXUGO_INTEGRATION=1` is set;
 CI runs it on pushes to main only. Run it alone after `pnpm build`:
 
@@ -150,8 +158,9 @@ cd packages/cli/dist && TEXUGO_INTEGRATION=1 node --test raid.integration.test.j
 
 Be aware of these before assuming the code handles a case:
 
-- **Only npm is exercised.** The pnpm, yarn and bun branches in
-  `core/src/project.ts` are written but untested.
+- **Yarn Berry (2+) is untested.** npm, pnpm, yarn classic and bun run in the
+  integration test; Berry needs a `packageManager` field and Corepack, and
+  its output has no `failureReason()` fixtures yet.
 - **Monorepos are detected, not handled.** `defaultPipeline()` reads root
   scripts only, and a root-level `pnpm add` in a workspace may not do what the
   user expects.

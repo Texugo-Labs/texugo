@@ -17,10 +17,13 @@ const ANSI = /\u001b\[[0-?]*[ -/]*[@-~]/g;
 /**
  * Lines that are never the reason, however error-adjacent they look: stack
  * frames, the caret under a source line, Node's version trailer, a passing
- * test's tick, the package manager's echo of the script it is about to run
- * (`> pkg@1.0.0 test`), and its "the script you ran failed" epilogue, which
- * restates the failure without naming it. npm prefixes its lines `npm ERR!` in
- * older releases and `npm error` in current ones (10.9, bundled with Node 22).
+ * test's tick, the package manager's banner and its echo of the script it is
+ * about to run (`> pkg@1.0.0 test` from npm and pnpm, `$ node test.js` from
+ * yarn and bun), and its "the script you ran failed" epilogue, which restates
+ * the failure without naming it. yarn and bun spell that epilogue as an error,
+ * so without these it wins every bare non-zero exit. npm prefixes its lines
+ * `npm ERR!` in older releases and `npm error` in current ones (10.9, bundled
+ * with Node 22).
  */
 const NOISE: RegExp[] = [
   /^Node\.js v\d/,
@@ -28,10 +31,14 @@ const NOISE: RegExp[] = [
   /^\^+$/,
   /^(✔|✓|√)\s/,
   /^> /,
+  /^\$ /,
+  /^(yarn|bun) \w+ v\d/,
+  /^info Visit https:\/\/yarnpkg\.com\//,
   /^npm (notice|warn)/i,
   /^npm (ERR!|error) (code |errno |path |command |A complete log)/i,
   /^(ELIFECYCLE|ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL)/,
-  /^Command failed with exit code/i,
+  /^(error )?Command failed with exit code/i,
+  /^error: script ".*" exited with code/,
   /^\s*$/,
 ];
 

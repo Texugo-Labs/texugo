@@ -14,12 +14,15 @@ concurrency:
 
 jobs:
   test:
-    name: Node ${{ matrix.node }}
-    runs-on: ubuntu-latest
+    name: ${{ matrix.os }} / Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
     strategy:
-      # A failure on one Node version says nothing about the other; see both.
+      # A failure on one Node version or OS says nothing about another; see all.
       fail-fast: false
       matrix:
+        # Windows is not optional: exec() takes a separate cmd.exe path there,
+        # and its tests are skipped everywhere else.
+        os: [ubuntu-latest, windows-latest]
         node: [22, 24]
     steps:
       # Pinned to commit SHAs: a tool that audits dependency trees should not
@@ -57,6 +60,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+      # The test runs once per package manager and skips any that is missing.
+      # Pinned like the actions above, so a new release cannot fail main.
+      - run: npm install --global yarn@1.22.22 bun@1.4.3
       - run: node --test --test-reporter=spec raid.integration.test.js
         working-directory: packages/cli/dist
         env:
