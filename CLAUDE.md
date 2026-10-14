@@ -77,7 +77,10 @@ wiring a CLI subcommand. Nothing else.
   rather than printing results. `--skip-baseline` is the escape hatch.
 - **`exec()` never rejects.** A command that fails to spawn returns a
   `StepResult` with `exitCode: -1`. Callers treat "does not exist" and "failed"
-  identically. Do not add a throwing path.
+  identically. Do not add a throwing path. On Windows, where package managers
+  are `.cmd` shims, commands run through `cmd.exe`, so `exec()` refuses any
+  argument outside a safe character set and checks `PATH` itself to keep the
+  `-1` contract.
 - **Captured output is capped** (256KB per stream) and truncated again in the
   JSON report. A pathological build log must not exhaust memory or produce a
   megabyte report.
@@ -128,6 +131,7 @@ it). Expected output:
 
 ```
 DEPENDENCY  FROM  TO     RESULT
+chalk       4     5.6.2  BREAKS  test: TypeError: chalk.green is not a function
 chalk       4     6.0.1  BREAKS  test: TypeError: chalk.green is not a function
 semver      6     7.8.5  ok
 ```
