@@ -16,11 +16,12 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": ["dist", "!dist/**/*.test.*"],
   "engines": {
     "node": ">=20.11"
   },
   "scripts": {
-    "build": "tsc --build"
+    "build": "tsc --build",
+    "test": "tsc --build && cd dist && node --test --test-reporter=spec"
   }
 }

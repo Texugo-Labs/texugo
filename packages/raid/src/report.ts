@@ -7,21 +7,29 @@ const SYMBOL: Record<ProbeResult['status'], string> = {
   errored: 'error',
 };
 
+/**
+ * Every CSI sequence, not only colours: spinners also emit erase-line, cursor
+ * and visibility codes, which would move the cursor if they reached the matrix.
+ */
 // eslint-disable-next-line no-control-regex
-const ANSI = /\u001b\[[0-9;]*m/g;
+const ANSI = /\u001b\[[0-?]*[ -/]*[@-~]/g;
 
 /**
  * Lines that are never the reason, however error-adjacent they look: stack
- * frames, the caret under a source line, Node's version trailer, and the
- * package manager's own "the script you ran failed" epilogue, which restates
- * the failure without naming it.
+ * frames, the caret under a source line, Node's version trailer, a passing
+ * test's tick, the package manager's echo of the script it is about to run
+ * (`> pkg@1.0.0 test`), and its "the script you ran failed" epilogue, which
+ * restates the failure without naming it. npm prefixes its lines `npm ERR!` in
+ * older releases and `npm error` in current ones (10.9, bundled with Node 22).
  */
 const NOISE: RegExp[] = [
   /^Node\.js v\d/,
   /^at\s/,
   /^\^+$/,
+  /^(✔|✓|√)\s/,
+  /^> /,
   /^npm (notice|warn)/i,
-  /^npm ERR! (code |errno |path |command |A complete log)/i,
+  /^npm (ERR!|error) (code |errno |path |command |A complete log)/i,
   /^(ELIFECYCLE|ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL)/,
   /^Command failed with exit code/i,
   /^\s*$/,
@@ -50,14 +58,19 @@ const SIGNALS: RegExp[] = [
  * rather than taking the first or last thing printed.
  */
 export function failureReason(result: ProbeResult): string {
-  if (result.error) return result.error;
-  const step = result.steps.find((candidate) => !candidate.ok);
+  if (result.error) return clip(result.error.split('\n', 1)[0] ?? '');
+  // An optional step can fail without failing the probe; the reason belongs to
+  // the step that did.
+  const step =
+    result.steps.find((candidate) => !candidate.ok && candidate.name === result.failedStep) ??
+    result.steps.find((candidate) => !candidate.ok);
   if (!step) return 'unknown';
   if (step.timedOut) return `${step.name} timed out`;
 
   const lines = `${step.stderr}\n${step.stdout}`
-    .split('\n')
-    .map((line) => line.replace(ANSI, '').trim())
+    .split(/\r?\n/)
+    // A bare carriage return redraws the line: keep what the terminal last showed.
+    .map((line) => line.slice(line.lastIndexOf('\r') + 1).replace(ANSI, '').trim())
     .filter((line) => line.length > 0 && !NOISE.some((pattern) => pattern.test(line)));
 
   let chosen: string | undefined;
@@ -67,9 +80,14 @@ export function failureReason(result: ProbeResult): string {
   }
 
   // Nothing looked like an error: the last surviving line is the best guess.
-  chosen ??= lines.at(-1) ?? `${step.name} exited ${step.exitCode ?? 'abnormally'}`;
+  const ended = step.signal ? `killed by ${step.signal}` : `exited ${step.exitCode ?? 'abnormally'}`;
+  chosen ??= lines.at(-1) ?? `${step.name} ${ended}`;
 
-  return chosen.length > 100 ? `${chosen.slice(0, 97)}...` : chosen;
+  return clip(chosen);
+}
+
+function clip(line: string): string {
+  return line.length > 100 ? `${line.slice(0, 97)}...` : line;
 }
 
 function pad(value: string, width: number): string {
