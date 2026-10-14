@@ -136,8 +136,15 @@ chalk       4     6.0.1  BREAKS  test: TypeError: chalk.green is not a function
 semver      6     7.8.5  ok
 ```
 
-That pair is also the planned integration test (TODO.md section 2). It needs
-network, so it is not part of `pnpm test` yet.
+That pair is also the integration test: `packages/cli/fixtures/raid/`, driven by
+`cli/src/raid.integration.test.ts`, which runs the built CLI against it and
+checks the `--json` report and that the fixture is byte-identical afterwards.
+It needs network, so `pnpm test` skips it unless `TEXUGO_INTEGRATION=1` is set;
+CI runs it on pushes to main only. Run it alone after `pnpm build`:
+
+```sh
+cd packages/cli/dist && TEXUGO_INTEGRATION=1 node --test raid.integration.test.js
+```
 
 ## Known gaps
 
