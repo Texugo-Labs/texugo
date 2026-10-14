@@ -81,6 +81,12 @@ wiring a CLI subcommand. Nothing else.
   are `.cmd` shims, commands run through `cmd.exe`, so `exec()` refuses any
   argument outside a safe character set and checks `PATH` itself to keep the
   `-1` contract.
+- **A timeout kills the whole process tree**, not just the direct child:
+  `taskkill /T` on Windows, the step's own process group elsewhere. Killing
+  only `npm` leaves its `sh` and `node` holding the pipes, and the step never
+  settles. Because those groups are out of reach of the terminal's Ctrl+C,
+  `core` kills any still running on process exit, and the CLI turns
+  SIGINT/SIGTERM into an exit so that hook runs.
 - **Captured output is capped** (256KB per stream) and truncated again in the
   JSON report. A pathological build log must not exhaust memory or produce a
   megabyte report.

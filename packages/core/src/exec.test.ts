@@ -1,11 +1,32 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, describe, test } from 'node:test';
+import { setTimeout as sleep } from 'node:timers/promises';
+import { promisify } from 'node:util';
 import { exec } from './exec.js';
 
 const onWindows = process.platform === 'win32';
+
+function alive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code === 'EPERM';
+  }
+}
+
+/** Killing is asynchronous on every platform; give it a few seconds. */
+async function waitForExit(pid: number): Promise<boolean> {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    if (!alive(pid)) return true;
+    await sleep(100);
+  }
+  return false;
+}
 
 describe('exec', () => {
   let cwd = '';
@@ -17,6 +38,27 @@ describe('exec', () => {
     await writeFile(join(cwd, 'exit-3.js'), 'process.exit(3);\n');
     await writeFile(join(cwd, 'echo-args.js'), 'console.log(JSON.stringify(process.argv.slice(2)));\n');
     await writeFile(join(cwd, 'hang.js'), 'setTimeout(() => {}, 120000);\n');
+    // What `npm run test` looks like from outside: a process whose child
+    // outlives it unless killed too, holding the inherited stdout pipe.
+    await writeFile(
+      join(cwd, 'spawn-hang.js'),
+      [
+        "const { spawn } = require('node:child_process');",
+        "const child = spawn(process.execPath, ['hang.js'], { stdio: 'inherit' });",
+        "require('node:fs').writeFileSync(process.argv[2], String(child.pid));",
+        'setTimeout(() => {}, 120000);',
+        '',
+      ].join('\n'),
+    );
+    await writeFile(
+      join(cwd, 'exit-mid-step.mjs'),
+      [
+        `import { exec } from ${JSON.stringify(new URL('./exec.js', import.meta.url).href)};`,
+        "exec(['node', 'spawn-hang.js', 'exit.pid'], { cwd: process.cwd(), timeoutMs: 60000 });",
+        'setTimeout(() => process.exit(0), 1000);',
+        '',
+      ].join('\n'),
+    );
   });
 
   after(async () => {
@@ -55,6 +97,27 @@ describe('exec', () => {
     assert.equal(result.ok, false);
     assert.ok(result.durationMs < 15_000, `settled after ${result.durationMs}ms`);
   });
+
+  test('kills the children of a step that outlives its timeout', { timeout: 30_000 }, async () => {
+    const result = await exec(['node', 'spawn-hang.js', 'timeout.pid'], { cwd, timeoutMs: 1000 });
+    assert.equal(result.timedOut, true);
+    assert.ok(result.durationMs < 15_000, `settled after ${result.durationMs}ms`);
+    const grandchild = Number(await readFile(join(cwd, 'timeout.pid'), 'utf8'));
+    assert.ok(await waitForExit(grandchild), `grandchild ${grandchild} is still running`);
+  });
+
+  // Steps run in their own process group on POSIX, out of reach of the
+  // terminal's Ctrl+C, so exiting must take them down. Windows keeps steps in
+  // the console's group, where Ctrl+C still reaches them.
+  test(
+    'kills running steps when the process exits',
+    { skip: onWindows, timeout: 30_000 },
+    async () => {
+      await promisify(execFile)(process.execPath, ['exit-mid-step.mjs'], { cwd });
+      const grandchild = Number(await readFile(join(cwd, 'exit.pid'), 'utf8'));
+      assert.ok(await waitForExit(grandchild), `grandchild ${grandchild} is still running`);
+    },
+  );
 
   describe('on Windows, where commands run through cmd.exe', { skip: !onWindows }, () => {
     for (const arg of ['x&echo injected', 'a|b', '%PATH%', 'two words', '"quoted"', 'a^b', 'a>out.txt', 'a(b)']) {
