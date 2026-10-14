@@ -6,7 +6,7 @@
   "description": "Texugo Labs — fearless tooling for JavaScript projects",
   "packageManager": "pnpm@10.28.0",
   "engines": {
-    "node": ">=20.11"
+    "node": ">=22"
   },
   "scripts": {
     "build": "tsc --build packages/core packages/raid packages/cli",

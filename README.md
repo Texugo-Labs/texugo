@@ -23,7 +23,7 @@ Nothing is ever written to your working tree.
 npx texugo raid
 ```
 
-Requires Node 20.11 or newer.
+Requires Node 22 or newer.
 
 ## `texugo raid`
 

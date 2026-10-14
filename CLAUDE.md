@@ -97,7 +97,7 @@ wiring a CLI subcommand. Nothing else.
 - `verbatimModuleSyntax` is on: use `import type` for type-only imports.
 - `noUncheckedIndexedAccess` is on: array indexing yields `T | undefined`.
   Handle it rather than asserting with `!`.
-- Target Node 20.11+. `node:util` `parseArgs`, global `fetch` and
+- Target Node 22+. `node:util` `parseArgs`, global `fetch` and
   `AbortSignal.timeout` are all fair game.
 - Comments explain **why**, not what. The existing comments are the house style:
   they justify a non-obvious decision. Do not add comments restating the code.
