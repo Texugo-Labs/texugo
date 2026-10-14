@@ -35,7 +35,7 @@
   },
   "files": ["dist", "!dist/**/*.test.*"],
   "engines": {
-    "node": ">=20.11"
+    "node": ">=22"
   },
   "scripts": {
     "build": "tsc --build",
