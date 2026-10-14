@@ -38,3 +38,26 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test
+
+  integration:
+    name: Integration
+    # Hits the npm registry and cold-installs per probe: too slow and too
+    # network-dependent to gate every PR, so it guards main instead.
+    if: github.event_name == 'push'
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: node --test --test-reporter=spec raid.integration.test.js
+        working-directory: packages/cli/dist
+        env:
+          TEXUGO_INTEGRATION: '1'
